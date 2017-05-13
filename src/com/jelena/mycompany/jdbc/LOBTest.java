@@ -11,6 +11,7 @@ import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 
 
 public class LOBTest {
@@ -27,7 +28,8 @@ public class LOBTest {
 			conn = JDBCUtil.getConnection();			
 			pstmt = getUpdateSQL(conn);			
 			//updateEmployeePicture(conn, pstmt, 3, inPicturePath);
-			updateEmployeePicture(conn, pstmt, 6, inPicturePath);
+			//updateEmployeePicture(conn, pstmt, 6, inPicturePath);
+			updateEmployeePicture(conn, pstmt, 6, null);
 			JDBCUtil.commit(conn);
 			System.out.println("Updated employee's picture successfully.");	
 		}
@@ -51,6 +53,9 @@ public class LOBTest {
 				Blob pictureBlob = conn.createBlob();
 				readInPictureData(pictureBlob, pictureFilePath);
 				pstmt.setBlob(1, pictureBlob);
+			}
+			else {
+				pstmt.setNull(1, Types.BLOB);
 			}
 			pstmt.setInt(2, employeeId);		
 			pstmt.executeUpdate();					
