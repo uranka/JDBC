@@ -2,7 +2,9 @@ package com.jelena.mycompany.jdbc;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,6 +12,7 @@ import java.nio.file.Paths;
 import java.sql.Blob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 
@@ -22,25 +25,49 @@ public class LOBTest {
 		//String inPicturePath = "picture3.jpg";
 		//String inPicturePath = "picture6.jpg";
 		// updating employee's picture with a new picture
-		String inPicturePath = "picture6new.jpg";
+		// String inPicturePath = "picture6new.jpg";
+		String inPicturePath = "picture7.jpg";
 		ensureFileExistence(inPicturePath);
 		try {
-			conn = JDBCUtil.getConnection();			
-			pstmt = getUpdateSQL(conn);			
-			//updateEmployeePicture(conn, pstmt, 3, inPicturePath);
-			//updateEmployeePicture(conn, pstmt, 6, inPicturePath);
-			updateEmployeePicture(conn, pstmt, 6, null);
-			JDBCUtil.commit(conn);
-			System.out.println("Updated employee's picture successfully.");	
+			conn = JDBCUtil.getConnection();		
+			try {				
+				pstmt = getUpdateSQL(conn);			
+				//updateEmployeePicture(conn, pstmt, 3, inPicturePath);				
+				//updateEmployeePicture(conn, pstmt, 6, null);
+				//updateEmployeePicture(conn, pstmt, 6, inPicturePath);
+				updateEmployeePicture(conn, pstmt, 7, inPicturePath);
+				JDBCUtil.commit(conn);
+				System.out.println("Updated employee's picture successfully.");					
+			}
+			catch(SQLException e) {		
+				System.out.println("Updating employee's picture failed: ");
+				System.out.println(e.getMessage());
+				JDBCUtil.rollback(conn);
+			}
+			
+			// CITANJE	
+			//String outPicturePath = "out_picture6.jpg";	
+			String outPicturePath = "out_picture7.jpg";			
+			try {
+				//retrieveEmployeePicture(conn, 6, outPicturePath);
+				retrieveEmployeePicture(conn, 7, outPicturePath);
+				JDBCUtil.commit(conn);
+				System.out.println("Retrieved and saved employee's picture successfully");				
+			}
+			catch(SQLException e) {
+				System.out.println("Retrieving employee's picture failed: ");
+				System.out.println(e.getMessage());
+				JDBCUtil.rollback(conn);
+			}				
 		}
-		catch(SQLException e) {		
-			System.out.println("Updating employee's picture failed: ");
+		catch(Exception e) {
 			System.out.println(e.getMessage());
-			JDBCUtil.rollback(conn);
+			JDBCUtil.rollback(conn);		
 		}
 		finally {
 			JDBCUtil.closeConnection(conn);
 		}
+		
 	}
 	
 		
@@ -101,5 +128,46 @@ public class LOBTest {
 		if (!Files.exists(path)) {
 			throw new RuntimeException("File " + path.toAbsolutePath() + " does not exist");
 		}
+	}
+	
+	public static void retrieveEmployeePicture(Connection conn,
+			int employeeId,
+			String picturePath) 
+					throws SQLException {
+		String SQL = "SELECT employee_id, picture " +
+					"FROM employees " +
+					"where employee_id = ?";
+		PreparedStatement pstmt = null;
+		try {
+			pstmt = conn.prepareStatement(SQL);
+			pstmt.setInt(1, employeeId);
+			ResultSet rs = pstmt.executeQuery();
+			
+			while(rs.next()) {
+				//int empId = rs.getInt("employee_id");
+				Blob pictureBlob = rs.getBlob("picture");
+				if (pictureBlob != null) {
+					savePicture(pictureBlob, picturePath); 
+					pictureBlob.free(); // frees the Blob object and releases the resources that it holds
+				}	
+			}
+		}
+		catch(IOException | SQLException e) {
+			throw new SQLException(e);			
+		}
+		finally {
+			JDBCUtil.closeStatement(pstmt);
+		}
+	}
+	
+	public static void savePicture(Blob pictureBlob, String filePath)
+			throws SQLException, IOException {
+		InputStream in = pictureBlob.getBinaryStream();
+		FileOutputStream fos = new  FileOutputStream(filePath);
+		int b = -1;
+		while ((b = in.read()) != -1) {
+			fos.write(b);
+		}
+		fos.close();		
 	}	
 }
