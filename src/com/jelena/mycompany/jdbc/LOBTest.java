@@ -38,7 +38,7 @@ public class LOBTest {
 			
 			// UPDATE PICTURE
 			try {				
-				pstmt = getUpdateSQL(conn);			
+				pstmt = getUpdatePictureSQL(conn);			
 				//updateEmployeePicture(conn, pstmt, 3, inPicturePath);				
 				//updateEmployeePicture(conn, pstmt, 6, null);
 				//updateEmployeePicture(conn, pstmt, 6, inPicturePath);
@@ -54,12 +54,23 @@ public class LOBTest {
 			
 			// RETRIEVE PICTURE	
 			//String outPicturePath = "out_picture6.jpg";	
-			String outPicturePath = "out_picture7.jpg";			
+			String outPicturePath = "out_picture7.jpg";		
+			/*
 			try {
 				//retrieveEmployeePicture(conn, 6, outPicturePath);
 				retrieveEmployeePicture(conn, 7, outPicturePath);
 				JDBCUtil.commit(conn);
 				System.out.println("Retrieved and saved employee's picture successfully");				
+			}*/
+			
+			try {														
+				if (retrieveEmployeePicture(conn, 7, outPicturePath)) {
+					System.out.println("Retrieved and saved employee's picture successfully");	
+				}
+				else {
+					System.out.println("There was no required picture in the database.");	
+				}
+				JDBCUtil.commit(conn);	
 			}
 			catch(SQLException e) {
 				System.out.println("Retrieving employee's picture failed: ");
@@ -84,11 +95,14 @@ public class LOBTest {
 			
 			// RETRIEVE CV
 			String outCvPath = "out_cv7.txt";
-			try {				
-				retrieveEmployeeCv(conn, 7, outCvPath);
-				//retrieveEmployeeCv(conn, 8, outCvPath);
-				JDBCUtil.commit(conn);
-				System.out.println("Retrieved and saved employee's cv successfully");				
+			try {														
+				if (retrieveEmployeeCv(conn, 7, outCvPath)) {
+					System.out.println("Retrieved and saved employee's cv successfully");	
+				}
+				else {
+					System.out.println("There was no required cv in the database.");	
+				}
+				JDBCUtil.commit(conn);	
 			}
 			catch(SQLException e) {
 				System.out.println("Retrieving employee's cv failed: ");
@@ -103,8 +117,7 @@ public class LOBTest {
 		}
 		finally {
 			JDBCUtil.closeConnection(conn);
-		}
-		
+		}		
 	}
 	
 		
@@ -151,7 +164,7 @@ public class LOBTest {
 	}
 
 	
-	public static PreparedStatement getUpdateSQL(Connection conn) throws SQLException {
+	public static PreparedStatement getUpdatePictureSQL(Connection conn) throws SQLException {
 		String SQL = "UPDATE employees " +
 				"SET picture = ? " +
 				"WHERE employee_id = ? ";				
@@ -175,7 +188,9 @@ public class LOBTest {
 		}
 	}
 	
-	public static void retrieveEmployeePicture(Connection conn,
+// returns true if picture is retrieved
+// return false if there was no required picture	
+	public static boolean retrieveEmployeePicture(Connection conn,
 			int employeeId,
 			String picturePath) 
 					throws SQLException {
@@ -183,6 +198,7 @@ public class LOBTest {
 					"FROM employees " +
 					"where employee_id = ?";
 		PreparedStatement pstmt = null;
+		boolean isPictureRetrieved = false;
 		try {
 			pstmt = conn.prepareStatement(SQL);
 			pstmt.setInt(1, employeeId);
@@ -194,8 +210,10 @@ public class LOBTest {
 				if (pictureBlob != null) {
 					savePicture(pictureBlob, picturePath); 
 					pictureBlob.free(); // frees the Blob object and releases the resources that it holds
+					isPictureRetrieved = true;
 				}	
 			}
+			return isPictureRetrieved;
 		}
 		catch(IOException | SQLException e) {
 			throw new SQLException(e);			
@@ -259,8 +277,9 @@ public class LOBTest {
 			writer.close();
 	}	
 	
-
-	public static void retrieveEmployeeCv(Connection conn,
+// returns true if cv is retrieved
+// return false if there was no required cv
+	public static boolean retrieveEmployeeCv(Connection conn,
 			int employeeId, 
 			String cvPath) 
 					throws SQLException {
@@ -268,6 +287,7 @@ public class LOBTest {
 					"FROM employees " +
 					"where employee_id = ?";
 		PreparedStatement pstmt = null;
+		boolean isCvRetrieved = false;
 		try {
 			pstmt = conn.prepareStatement(SQL);
 			pstmt.setInt(1, employeeId);
@@ -278,15 +298,12 @@ public class LOBTest {
 				if (cvClob != null) {
 					saveCv(cvClob, cvPath);
 					cvClob.free();
-				}	
-				// What should I do if the cvClob is null?
-				// perhaps it would be better if function returned false
-				// in the case there is no cv
-				// true otherwise
-				//else {
-					//System.out.println("There is no cv");
-				//}
+					isCvRetrieved = true;
+				}							
 			}
+			// if rs was empty isCvRetrieved remains false
+			// if cvClob was null isCvRetrieved remains false
+			return isCvRetrieved;
 		}
 		catch(IOException | SQLException e) {
 			throw new SQLException(e);			
